@@ -6,7 +6,7 @@ What was checked for gutenberg-mcp, with the exact commands and their real outpu
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Unit and integration tests (no network) | `npm test` | 76 tests in 5 files, all pass |
+| Unit and integration tests (no network) | `npm test` | 77 tests in 5 files, all pass |
 | Types | `npm run typecheck` | clean |
 | Dependencies | `npm audit` | `found 0 vulnerabilities` |
 | stdio transport | `node scripts/smoke.mjs --live` | initialize, 6 tools listed, live `quote_check` ok |
@@ -21,8 +21,10 @@ What was checked for gutenberg-mcp, with the exact commands and their real outpu
 ```
 $ npm test
  Test Files  5 passed (5)
-      Tests  76 passed (76)
+      Tests  77 passed (77)
 ```
+
+Re-run on 2026-10-07: 77 tests pass (earlier runs showed 76).
 
 `test/text.test.ts` covers license stripping (current and old marker styles, CRLF, BOM, files without markers), chapter detection (contents pages, illustration captions, books and acts, bare numerals, play speaker names), normalization levels and line mapping, sentence counting and the LRU/TTL caches. `test/tools.test.ts` covers each tool against two recorded book excerpts and recorded Gutendex and gutenberg.org search responses, including the search fallback, the slow-catalog path, 404s, size limits, the host allow list, mapping catalog URLs onto the mirror (and a custom `GUTENBERG_MIRROR`) and retries. `test/server.test.ts` runs the MCP protocol in memory (schemas, annotations, input validation before any request, error mapping, hidden internal errors). `test/http.test.ts` runs the official SDK client over a real socket and checks CORS, 405/406/400/413/429/504 handling, per-IP and daily limits, `X-Forwarded-For` trust and the playground's CSP. A mocked `fetch` throws on any unexpected request, so tests never touch the network.
 
