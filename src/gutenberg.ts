@@ -3,7 +3,11 @@
  *
  * - Gutendex (https://gutendex.com), a free JSON API over the Project Gutenberg
  *   catalog: search and per-book metadata.
- * - gutenberg.org itself, for the plain-text files.
+ * - A Project Gutenberg mirror for the plain-text files. Project Gutenberg's robot
+ *   policy (https://www.gutenberg.org/policy/robot_access.html) says www.gutenberg.org
+ *   is for human visitors and may block automated access, so book downloads go to
+ *   gutenberg.pglaf.org, the high-speed mirror Project Gutenberg runs itself and lists
+ *   in https://www.gutenberg.org/MIRRORS.ALL. GUTENBERG_MIRROR picks another one.
  *
  * Every request has a timeout. 429 and 5xx are retried with backoff. Catalog
  * responses are cached with a TTL; parsed books sit in an LRU bounded by memory.
@@ -14,14 +18,18 @@ import { Book } from "./book.js";
 import { LruCache, TtlCache } from "./text/lru.js";
 
 export const GUTENDEX_URL = "https://gutendex.com";
+/** Project Gutenberg's own mirror. Same paths as www.gutenberg.org (main collection and cache/epub). */
+export const DEFAULT_MIRROR_URL = "https://gutenberg.pglaf.org";
 const USER_AGENT = "gutenberg-mcp (+https://github.com/frogr/gutenberg-mcp)";
-/** Text files may only come from Project Gutenberg's own hosts. */
-const TEXT_HOSTS = new Set(["www.gutenberg.org", "gutenberg.org", "aleph.gutenberg.org"]);
+/** Hosts the catalog may name for a text file. Downloads are rewritten to the mirror. */
+const CATALOG_TEXT_HOSTS = new Set(["www.gutenberg.org", "gutenberg.org"]);
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export interface GutenbergClientOptions {
   gutendexUrl?: string;
+  /** Base URL of the Project Gutenberg mirror that book texts are downloaded from. */
+  mirrorUrl?: string;
   /** Catalog (Gutendex) timeout. Gutendex is sometimes slow; a book's text does not depend on it. */
   catalogTimeoutMs?: number;
   textTimeoutMs?: number;
@@ -91,6 +99,8 @@ const MAX_BACKOFF_MS = 5_000;
 
 export class GutenbergClient {
   private readonly gutendexUrl: string;
+  readonly mirrorUrl: string;
+  private readonly mirrorHost: string;
   private readonly catalogTimeoutMs: number;
   private readonly textTimeoutMs: number;
   private readonly maxRetries: number;
@@ -103,6 +113,8 @@ export class GutenbergClient {
 
   constructor(opts: GutenbergClientOptions = {}) {
     this.gutendexUrl = (opts.gutendexUrl ?? GUTENDEX_URL).replace(/\/+$/, "");
+    this.mirrorUrl = (opts.mirrorUrl ?? DEFAULT_MIRROR_URL).replace(/\/+$/, "");
+    this.mirrorHost = new URL(this.mirrorUrl).host;
     this.catalogTimeoutMs = opts.catalogTimeoutMs ?? 20_000;
     this.textTimeoutMs = opts.textTimeoutMs ?? 30_000;
     this.maxRetries = opts.maxRetries ?? 2;
@@ -168,8 +180,9 @@ export class GutenbergClient {
     // Skip the catalog when we can: the canonical text URL works for almost every book,
     // and Gutendex can take many seconds to answer.
     const cachedMeta = this.catalog.get(`${this.gutendexUrl}/books/${id}/`) as GutendexBook | undefined;
-    let url = cachedMeta ? pickTextUrl(cachedMeta) : canonicalTextUrl(id);
-    if (!url) throw noPlainText(id, cachedMeta!);
+    const picked = cachedMeta ? pickTextUrl(cachedMeta) : canonicalTextUrl(id, this.mirrorUrl);
+    if (!picked) throw noPlainText(id, cachedMeta!);
+    let url = this.toMirror(picked);
 
     let raw: string;
     try {
@@ -178,8 +191,9 @@ export class GutenbergClient {
       if (!(err instanceof GutenbergError) || err.status !== 404 || cachedMeta) throw err;
       // No file at the canonical path: ask the catalog where the text lives.
       const meta = await this.getMeta(id);
-      url = pickTextUrl(meta);
-      if (!url) throw noPlainText(id, meta);
+      const fromCatalog = pickTextUrl(meta);
+      if (!fromCatalog) throw noPlainText(id, meta);
+      url = this.toMirror(fromCatalog);
       raw = await this.fetchText(url);
     }
     const book = new Book(id, raw, url);
@@ -205,13 +219,22 @@ export class GutenbergClient {
     return value;
   }
 
-  private async fetchText(url: string): Promise<string> {
-    const host = new URL(url).hostname;
-    if (!TEXT_HOSTS.has(host)) {
-      throw new GutenbergError(`Refusing to download text from ${host}.`, undefined, "host", "Only gutenberg.org text files are supported.");
+  /**
+   * Map a text URL from the catalog (www.gutenberg.org) to the same file on the mirror.
+   * Anything that is not a Project Gutenberg URL is refused.
+   */
+  private toMirror(url: string): string {
+    const mapped = mirrorTextUrl(url, this.mirrorUrl);
+    if (!mapped) {
+      const host = new URL(url).hostname;
+      throw new GutenbergError(`Refusing to download text from ${host}.`, undefined, "host", "Only Project Gutenberg text files are supported.");
     }
-    const res = await this.request(url, this.textTimeoutMs, "text/plain", "gutenberg.org");
-    if (!res.ok) throw await httpError(res, "gutenberg.org");
+    return mapped;
+  }
+
+  private async fetchText(url: string): Promise<string> {
+    const res = await this.request(url, this.textTimeoutMs, "text/plain", this.mirrorHost);
+    if (!res.ok) throw await httpError(res, this.mirrorHost);
     const declared = Number(res.headers.get("content-length") ?? "0");
     if (declared > this.maxTextBytes) {
       void res.body?.cancel().catch(() => {});
@@ -296,8 +319,39 @@ function unescapeXml(s: string): string {
     .replace(/&amp;/g, "&");
 }
 
-export function canonicalTextUrl(id: number): string {
-  return `https://www.gutenberg.org/cache/epub/${id}/pg${id}.txt`;
+export function canonicalTextUrl(id: number, mirrorUrl = DEFAULT_MIRROR_URL): string {
+  return `${mirrorUrl.replace(/\/+$/, "")}/cache/epub/${id}/pg${id}.txt`;
+}
+
+/**
+ * The mirror URL for a Project Gutenberg text URL, or undefined if it isn't one.
+ * - ebooks/1342.txt.utf-8 (a redirect on gutenberg.org) -> cache/epub/1342/pg1342.txt
+ * - cache/epub/... -> same path on the mirror
+ * - files/1342/1342-0.txt -> 1/3/4/1342/1342-0.txt (the mirror's main-collection layout)
+ */
+export function mirrorTextUrl(url: string, mirrorUrl = DEFAULT_MIRROR_URL): string | undefined {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return undefined;
+  }
+  const base = mirrorUrl.replace(/\/+$/, "");
+  if (u.origin === new URL(base).origin) return u.toString();
+  if (u.protocol !== "https:" && u.protocol !== "http:") return undefined;
+  if (!CATALOG_TEXT_HOSTS.has(u.hostname)) return undefined;
+  let m = /^\/ebooks\/(\d+)\.txt(?:\.[\w-]+)?$/.exec(u.pathname);
+  if (m) return canonicalTextUrl(Number(m[1]), base);
+  if (/^\/cache\/epub\/\d+\/[\w.-]+\.txt$/.test(u.pathname)) return `${base}${u.pathname}`;
+  m = /^\/files\/(\d+)\/([\w.-]+\.txt)$/.exec(u.pathname);
+  if (m) return `${base}/${collectionDir(m[1]!)}/${m[2]}`;
+  return undefined;
+}
+
+/** Main-collection directory for an ebook number: 1342 -> 1/3/4/1342, 5 -> 0/5. */
+export function collectionDir(id: string): string {
+  const parents = id.length === 1 ? ["0"] : id.slice(0, -1).split("");
+  return [...parents, id].join("/");
 }
 
 /** Best plain-text format: UTF-8 first, then any text/plain. Zip archives are skipped. */

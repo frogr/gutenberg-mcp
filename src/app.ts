@@ -20,7 +20,7 @@ import { GutenbergClient } from "./gutenberg.js";
 export interface AppConfig {
   /** Requests per minute per IP on /mcp. */
   rateLimitPerMinute: number;
-  /** Requests per UTC day on /mcp across everyone. Keeps a public demo polite to Gutendex and gutenberg.org. */
+  /** Requests per UTC day on /mcp across everyone. Keeps a public demo polite to Gutendex and the Gutenberg mirror. */
   dailyRequestLimit: number;
   /** Largest accepted POST body, in bytes. */
   maxBodyBytes: number;
@@ -156,6 +156,7 @@ export function createApp(opts: AppOptions): Handler {
             endpoint: "/mcp",
             uptime_s: Math.round((now() - startedAt) / 1000),
             cached_books: opts.client.cachedBooks,
+            text_mirror: opts.client.mirrorUrl,
             limits: { per_ip_per_minute: config.rateLimitPerMinute, daily_requests: config.dailyRequestLimit, daily_used: daily.used },
           }),
           cors,
@@ -176,7 +177,7 @@ export function createApp(opts: AppOptions): Handler {
           const day = daily.take();
           if (!day.allowed) {
             return withHeaders(
-              rpcError(429, -32000, "This public demo hit its daily request cap. Try again tomorrow, or run the server yourself (npx gutenberg-mcp).", {
+              rpcError(429, -32000, "This public demo hit its daily request cap. Try again tomorrow, or run the server yourself (npx -y github:frogr/gutenberg-mcp).", {
                 "Retry-After": String(day.retryAfterSec),
               }),
               cors,

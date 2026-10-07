@@ -14,6 +14,7 @@ export function clientOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): Gute
   };
   return {
     gutendexUrl: env.GUTENDEX_URL?.trim() || undefined,
+    mirrorUrl: env.GUTENBERG_MIRROR?.trim() || undefined,
     catalogTimeoutMs: positive(env.GUTENDEX_TIMEOUT_MS),
     textTimeoutMs: positive(env.TEXT_TIMEOUT_MS),
     maxTextBytes: mb("MAX_BOOK_MB"),

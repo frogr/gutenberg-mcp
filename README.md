@@ -2,7 +2,7 @@
 
 An [MCP](https://modelcontextprotocol.io) server that lets Claude, ChatGPT, Cursor or any MCP client search, read and accurately quote public-domain books from [Project Gutenberg](https://www.gutenberg.org/), the free library of 75,000+ ebooks. MCP (Model Context Protocol) is the open standard that lets AI apps call outside tools.
 
-It finds books through [Gutendex](https://gutendex.com) (a JSON API over the Gutenberg catalog), downloads the plain text from gutenberg.org, strips the license header and footer, detects the chapters, and gives the model stable line numbers to read and cite. Its most useful tool is `quote_check`: it tells the model whether a quotation is really in the book, how faithful the copy is, and what the book actually says. It runs locally over stdio (`npx gutenberg-mcp`) or as a remote server over Streamable HTTP with a web playground. No API key.
+It finds books through [Gutendex](https://gutendex.com) (a JSON API over the Gutenberg catalog), downloads the plain text from a Project Gutenberg mirror, strips the license header and footer, detects the chapters, and gives the model stable line numbers to read and cite. Its most useful tool is `quote_check`: it tells the model whether a quotation is really in the book, how faithful the copy is, and what the book actually says. It runs locally over stdio (`npx -y github:frogr/gutenberg-mcp`) or as a remote server over Streamable HTTP with a web playground. No API key.
 
 ![Playground: quote_check on a famous misquote](docs/screenshots/quote-not-found.png)
 
@@ -40,11 +40,15 @@ Every hit comes back with its line numbers, chapter and the book's own lines, so
 
 Requires Node.js 20 or newer.
 
+The package is not on npm yet. The commands below install it straight from GitHub with `npx -y github:frogr/gutenberg-mcp`: npm clones the repo, installs dependencies and builds it (a `prepare` script runs `npm run build`). The first start takes about 20 seconds while that happens, so run it once in a terminal before adding it to a client. If you'd rather not run a build through npx, use [From source](#from-source).
+
+After the package is published to npm, `npx -y gutenberg-mcp` will do the same thing. Until then, don't run that name: nothing has been published under it by this project.
+
 ### Claude Code
 
 ```bash
 # local, over stdio
-claude mcp add --transport stdio gutenberg -- npx -y gutenberg-mcp
+claude mcp add --transport stdio gutenberg -- npx -y github:frogr/gutenberg-mcp
 
 # or a hosted copy, over HTTP
 claude mcp add --transport http gutenberg https://YOUR-HOST/mcp
@@ -59,7 +63,7 @@ Add this to `claude_desktop_config.json` (macOS: `~/Library/Application Support/
   "mcpServers": {
     "gutenberg": {
       "command": "npx",
-      "args": ["-y", "gutenberg-mcp"]
+      "args": ["-y", "github:frogr/gutenberg-mcp"]
     }
   }
 }
@@ -74,7 +78,7 @@ Add to `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one project):
 ```json
 {
   "mcpServers": {
-    "gutenberg": { "command": "npx", "args": ["-y", "gutenberg-mcp"] }
+    "gutenberg": { "command": "npx", "args": ["-y", "github:frogr/gutenberg-mcp"] }
   }
 }
 ```
@@ -89,7 +93,7 @@ Any client that speaks MCP over stdio or Streamable HTTP works. To poke at the s
 
 ```bash
 git clone https://github.com/frogr/gutenberg-mcp && cd gutenberg-mcp
-npm install && npm run build
+npm ci   # also builds dist/ through the prepare script
 # stdio: "command": "node", "args": ["/absolute/path/to/gutenberg-mcp/dist/index.js"]
 # HTTP:  npm start  (playground at http://localhost:3000, MCP at /mcp)
 ```
@@ -105,13 +109,13 @@ npm install && npm run build
 | `quote_check` | Verify a quotation | `id`, `quote` (≤ 2,000 chars), `case_sensitive` | `found`, `match` level, verdict, every location with the real lines, or the closest passage and the missing words |
 | `book_stats` | Count things | `id`, `top_n` | Words, unique words, sentences, average sentence and word length, reading time, top content words, longest and shortest chapter |
 
-Every tool is read-only (`readOnlyHint: true`), validates its input with zod, and declares an `outputSchema`. Results come back as JSON text, which every client can read, and as `structuredContent` for clients that use it. Every result that contains book text carries an `attribution` line naming the book and its gutenberg.org page.
+Every tool is read-only (`readOnlyHint: true`), validates its input with zod, and declares an `outputSchema`. Results come back as JSON text, which every client can read, and as `structuredContent` for clients that use it. Every result that contains book text carries an `attribution` line naming the book and linking its gutenberg.org page (see [Attribution](#attribution)).
 
 ## How it works
 
-**Text.** Books are fetched from `https://www.gutenberg.org/cache/epub/{id}/pg{id}.txt`, the address Gutenberg's own `.txt.utf-8` links redirect to, so reading a book does not wait for the catalog. If that file is missing, the server asks Gutendex for the book's formats and takes the best `text/plain` one (UTF-8 first). Only gutenberg.org hosts are allowed. Files over 16 MB are refused while streaming, before they are held in memory.
+**Text comes from a mirror, not www.gutenberg.org.** Project Gutenberg's [robot policy](https://www.gutenberg.org/policy/robot_access.html) says the main site is for human visitors, that automated access can get an IP blocked, and points programs to mirrors. So book files are downloaded from `https://gutenberg.pglaf.org/cache/epub/{id}/pg{id}.txt` by default. That host is the high-speed mirror Project Gutenberg runs itself (it is in their [mirror list](https://www.gutenberg.org/MIRRORS.ALL)), and it serves the same files at the same paths: Pride and Prejudice (`pg1342.txt`) had the same checksum on both hosts when this was checked. Set `GUTENBERG_MIRROR` to use another mirror that serves `cache/epub/`, or your own rsync copy. Reading a book does not wait for the catalog. If the file is missing, the server asks Gutendex for the book's formats, takes the best `text/plain` one (UTF-8 first) and maps it to the same file on the mirror (`ebooks/{id}.txt.utf-8` becomes `cache/epub/{id}/pg{id}.txt`; `files/1342/1342-0.txt` becomes `1/3/4/1342/1342-0.txt`, the mirror's directory layout). URLs that aren't Project Gutenberg files are refused. Files over 16 MB are refused while streaming, before they are held in memory.
 
-**License header and footer.** Everything before `*** START OF THE PROJECT GUTENBERG EBOOK ... ***` and after the matching `END` line is removed, including older variants (`THIS PROJECT GUTENBERG EBOOK`, `E-BOOK`, `End of the Project Gutenberg EBook of ...`). The title, author, language and release date are read from the header first, so `get_book` can still answer if the catalog is down. A short attribution line replaces the license.
+**License header and footer.** Everything before `*** START OF THE PROJECT GUTENBERG EBOOK ... ***` and after the matching `END` line is removed, including older variants (`THIS PROJECT GUTENBERG EBOOK`, `E-BOOK`, `End of the Project Gutenberg EBook of ...`). The title, author, language and release date are read from the header first, so `get_book` can still answer if the catalog is down. A short attribution line replaces the license (see [Attribution](#attribution)).
 
 **Line numbers.** Line 1 is the first line after the header. All tools use the same numbering, so a line from `find_in_book` can go straight into `read_passage` or a citation.
 
@@ -126,9 +130,9 @@ Every tool is read-only (`readOnlyHint: true`), validates its input with zod, an
 
 **Search.** `find_in_book` and `quote_check` search a normalized copy of the book (line breaks become spaces; curly quotes, dashes and `_italics_` markers are unified; case folded) and map each hit back to its source lines with a binary search over per-line offsets. That index costs one integer per line, not per character.
 
-**Caching.** Parsed books live in an in-memory LRU bounded by an estimated byte budget (`BOOK_CACHE_MB`, default 160) and 24 entries. Two tools asking for the same book at once share one download. Catalog responses are cached for an hour.
+**Caching.** Parsed books live in an in-memory LRU bounded by an estimated byte budget (`BOOK_CACHE_MB`, default 160) and 24 entries. Two tools asking for the same book at once share one download. Catalog responses (Gutendex, and the gutenberg.org search feed below) are cached for an hour, so a repeated search doesn't reach either service again.
 
-**Gutendex is sometimes slow.** Popular searches come back in under a second, but uncached ones took 40 to 60 seconds or timed out when tested (see PROOF.md). So `search_books` waits 8 seconds for Gutendex and then answers from gutenberg.org's own search feed (ids, titles and authors only, no filters), saying so in `source` and `note`. The Gutendex request keeps running and is cached for next time. `get_book` waits up to 3 seconds for the catalog after the text arrives, then falls back to the title and author in the file header.
+**Gutendex is sometimes slow.** Popular searches come back in under a second, but uncached ones took 40 to 60 seconds or timed out when tested (see PROOF.md). So `search_books` waits 8 seconds for Gutendex and then answers from gutenberg.org's own OPDS search feed (the catalog feed that e-reader apps use; ids, titles and authors only, no filters), saying so in `source` and `note`. This is the only request that goes to www.gutenberg.org. It happens only when Gutendex is slow, is cached for an hour, and counts against the server's per-IP and daily limits. The Gutendex request keeps running and is cached for next time. `get_book` waits up to 3 seconds for the catalog after the text arrives, then falls back to the title and author in the file header.
 
 **Errors.** Upstream failures become tool errors (`isError: true`) that say what happened and what to try next:
 
@@ -146,7 +150,7 @@ Unexpected errors are logged on the server and reach the client only as a generi
 | Route | Purpose |
 | --- | --- |
 | `POST /mcp` | MCP over Streamable HTTP, stateless, JSON responses (official `@modelcontextprotocol/sdk` transport) |
-| `GET /health` | Status, version, cached book count, limits. Never calls upstream. |
+| `GET /health` | Status, version, cached book count, the text mirror, limits. Never calls upstream. |
 | `GET /` | Web playground: run every tool from a form, rendered results, raw JSON toggle, client config snippets |
 
 Limits, all set by env var: 30 requests per minute per IP on `/mcp` (token bucket, `RATE_LIMIT_PER_MINUTE`), 5,000 requests per UTC day across everyone (`DAILY_REQUEST_LIMIT`), 64 KB request bodies (`MAX_BODY_BYTES`, enforced while streaming), 30 seconds per request (`REQUEST_TIMEOUT_MS`), slow-header protection, and CORS (`CORS_ORIGINS`, default `*`). Rate-limited responses carry `Retry-After`. Behind a proxy, set `TRUST_PROXY` to the number of proxies so the real client IP is used and a spoofed `X-Forwarded-For` is ignored. The playground page is served with a strict Content-Security-Policy and builds all book text into the page as text nodes, never HTML.
@@ -156,6 +160,7 @@ Limits, all set by env var: 30 requests per minute per IP on `/mcp` (token bucke
 | Env var | Default | Purpose |
 | --- | --- | --- |
 | `GUTENDEX_URL` | `https://gutendex.com` | Catalog API. Gutendex is open source; point this at your own copy if you need speed. |
+| `GUTENBERG_MIRROR` | `https://gutenberg.pglaf.org` | Where book texts are downloaded from. Any Project Gutenberg mirror that serves `cache/epub/`. |
 | `GUTENDEX_TIMEOUT_MS` | `20000` | Timeout for one catalog request |
 | `TEXT_TIMEOUT_MS` | `30000` | Timeout for one book download |
 | `MAX_BOOK_MB` | `16` | Largest book file accepted |
@@ -205,10 +210,10 @@ Tests run against two recorded book excerpts (Moby Dick and Pride and Prejudice,
 
 ```
 src/
-  index.ts            stdio entrypoint (the npx bin)
+  index.ts            stdio entrypoint (the package bin)
   http.ts, app.ts     remote server: Node adapter, routes, limits
   server.ts           tool registration
-  gutenberg.ts        Gutendex + gutenberg.org client: timeouts, retries, caches, errors
+  gutenberg.ts        Gutendex + mirror client: timeouts, retries, caches, errors
   book.ts             a parsed book: lines, chapters, lazy search indexes and stats
   text/               header stripping, chapter detection, normalization, stats, LRU
   tools/              one file per tool: zod input/output schemas + handler
@@ -216,9 +221,19 @@ public/index.html     playground (no build step, no dependencies)
 eval/                 hand-labeled quotes and book structures for scripts/eval.mjs
 ```
 
+## Attribution
+
+Every result with book text carries a line like this:
+
+```
+"Pride and Prejudice" by Jane Austen. Public domain text (USA), eBook #1342: https://www.gutenberg.org/ebooks/1342
+```
+
+It doesn't say "Project Gutenberg" on purpose. The server strips the Project Gutenberg license header and footer from each book. Project Gutenberg's [license](https://www.gutenberg.org/policy/license.html) says that once you strip the license and all references to Project Gutenberg, you can do anything you want with the text, and that the name is a trademark reserved for copies that keep the license. Their [permissions page](https://www.gutenberg.org/policy/permission.html) also says crediting them as a source, with a link to the book's landing page, needs no permission, and the license lists links in acknowledgements as not using the trademark. So the line names the book, says it's public domain in the USA, and links the landing page, without presenting the stripped text as a Project Gutenberg eBook. Outside the USA, check your own country's copyright rules.
+
 ## License
 
-MIT © Austin French. Book texts are public domain in the USA and come from Project Gutenberg; this project is not affiliated with Project Gutenberg or Gutendex.
+MIT © Austin French. Book texts are public domain in the USA and come from Project Gutenberg's collection; this project is not affiliated with Project Gutenberg or Gutendex.
 
 ---
 

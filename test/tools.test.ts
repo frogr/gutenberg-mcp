@@ -1,7 +1,7 @@
 // Tool handlers against recorded Gutendex responses and two book excerpts
 // (Moby Dick and Pride and Prejudice, header and footer included). No network.
 import { describe, expect, it } from "vitest";
-import { GutenbergClient, pickTextUrl } from "../src/gutenberg.js";
+import { collectionDir, GutenbergClient, mirrorTextUrl, pickTextUrl } from "../src/gutenberg.js";
 import { bookStats } from "../src/tools/bookStats.js";
 import { findInBook } from "../src/tools/findInBook.js";
 import { getBook } from "../src/tools/getBook.js";
@@ -19,7 +19,8 @@ describe("quote_check", () => {
     expect(r).toMatchObject({ found: true, match: "exact", occurrences: 1 });
     expect(r.locations[0]).toMatchObject({ start_line: 40, end_line: 40, chapter: { index: 1, label: "CHAPTER 1", title: "Loomings" } });
     expect(r.locations[0].text).toMatch(/^40 {2}Call me Ishmael\. Some years ago/);
-    expect(r.attribution).toMatch(/^"Moby Dick; Or, The Whale" by Herman Melville, from Project Gutenberg/);
+    expect(r.attribution).toBe('"Moby Dick; Or, The Whale" by Herman Melville. Public domain text (USA), eBook #2701: https://www.gutenberg.org/ebooks/2701');
+    expect(r.attribution).not.toMatch(/Project Gutenberg/);
   });
 
   it("reports how faithful a copy is: typography, case, then punctuation", async () => {
@@ -247,10 +248,38 @@ describe("GutenbergClient", () => {
     expect(client.cachedBooks).toBe(1);
   });
 
-  it("uses the canonical text URL without waiting for the catalog", async () => {
+  it("downloads from the Gutenberg mirror, not www.gutenberg.org, without waiting for the catalog", async () => {
     const { client, calls } = library();
-    await client.getBook(1342);
-    expect(calls.map((u) => u.hostname)).toEqual(["www.gutenberg.org"]);
+    const book = await client.getBook(1342);
+    expect(calls.map((u) => u.toString())).toEqual(["https://gutenberg.pglaf.org/cache/epub/1342/pg1342.txt"]);
+    expect(book.sourceUrl).toBe("https://gutenberg.pglaf.org/cache/epub/1342/pg1342.txt");
+  });
+
+  it("uses the mirror set in options (GUTENBERG_MIRROR), also for catalog fallbacks", async () => {
+    const meta = { ...fixture<any>("gutendex-book-2701.json"), id: 37431, formats: { "text/plain; charset=us-ascii": "https://www.gutenberg.org/files/37431/37431-8.txt" } };
+    const m = mockFetch([
+      { match: path("/gutenberg/cache/epub/37431/pg37431.txt"), respond: () => text("Not Found", 404) },
+      { match: path("/books/37431/"), respond: () => json(meta) },
+      { match: path("/gutenberg/3/7/4/3/37431/37431-8.txt"), respond: () => text(fixtureText("pg2701-excerpt.txt")) },
+    ]);
+    await testClient(m.fetch, { mirrorUrl: "https://mirror.example.org/gutenberg/" }).getBook(37431);
+    const textCalls = m.calls.filter((u) => u.pathname.endsWith(".txt")).map((u) => u.toString());
+    expect(textCalls).toEqual([
+      "https://mirror.example.org/gutenberg/cache/epub/37431/pg37431.txt",
+      "https://mirror.example.org/gutenberg/3/7/4/3/37431/37431-8.txt",
+    ]);
+    expect(m.calls.some((u) => u.hostname === "www.gutenberg.org")).toBe(false);
+  });
+
+  it("maps catalog text URLs onto the mirror's layout", () => {
+    const mirror = "https://gutenberg.pglaf.org";
+    expect(mirrorTextUrl("https://www.gutenberg.org/ebooks/1342.txt.utf-8", mirror)).toBe(`${mirror}/cache/epub/1342/pg1342.txt`);
+    expect(mirrorTextUrl("https://www.gutenberg.org/cache/epub/84/pg84.txt", mirror)).toBe(`${mirror}/cache/epub/84/pg84.txt`);
+    expect(mirrorTextUrl("https://www.gutenberg.org/files/2489/2489-0.txt", mirror)).toBe(`${mirror}/2/4/8/2489/2489-0.txt`);
+    expect(mirrorTextUrl("https://www.gutenberg.org/files/5/5.txt", mirror)).toBe(`${mirror}/0/5/5.txt`);
+    expect(mirrorTextUrl("https://evil.example/pg7.txt", mirror)).toBeUndefined();
+    expect(mirrorTextUrl("https://www.gutenberg.org/ebooks/1342.html.images", mirror)).toBeUndefined();
+    expect(collectionDir("1342")).toBe("1/3/4/1342");
   });
 
   it("refuses books over the size limit, before or while reading", async () => {
@@ -260,7 +289,7 @@ describe("GutenbergClient", () => {
     await expect(testClient(streamed.fetch, { maxTextBytes: 1000 }).getBook(1)).rejects.toThrow(/larger than/);
   });
 
-  it("only downloads text from gutenberg.org", async () => {
+  it("only downloads Project Gutenberg text files", async () => {
     const evil = { ...fixture<any>("gutendex-book-2701.json"), id: 7, formats: { "text/plain; charset=utf-8": "https://evil.example/pg7.txt" } };
     const m = mockFetch([
       { match: path("/cache/epub/7/pg7.txt"), respond: () => text("nope", 404) },
@@ -279,7 +308,7 @@ describe("GutenbergClient", () => {
 
     const down = mockFetch([{ match: () => true, respond: () => text("busy", 503) }]);
     const err = await testClient(down.fetch).getBook(2701).catch((e) => e);
-    expect(err.toToolMessage()).toBe("gutenberg.org returned an error. (HTTP 503)\nHint: gutenberg.org is having trouble; retry shortly.");
+    expect(err.toToolMessage()).toBe("gutenberg.pglaf.org returned an error. (HTTP 503)\nHint: gutenberg.pglaf.org is having trouble; retry shortly.");
   });
 
   it("turns timeouts into a readable error", async () => {

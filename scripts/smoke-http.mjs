@@ -2,7 +2,7 @@
 // to POST /mcp the way a remote MCP client would.
 //
 //   node scripts/smoke-http.mjs          # /health, initialize, tools/list, CORS (no network)
-//   node scripts/smoke-http.mjs --live   # also make real tools/calls (Gutendex, gutenberg.org)
+//   node scripts/smoke-http.mjs --live   # also make real tools/calls (Gutendex, the Gutenberg mirror)
 import { spawn } from "node:child_process";
 
 const live = process.argv.includes("--live");

@@ -165,7 +165,7 @@ describe("rate limiting", () => {
     expect((await handler(rpc("tools/list"), { ip: "1.1.1.1" })).status).toBe(200);
     const capped = await handler(rpc("tools/list"), { ip: "3.3.3.3" });
     expect(capped.status).toBe(429);
-    expect((await capped.json()).error.message).toMatch(/daily request cap.*npx gutenberg-mcp/);
+    expect((await capped.json()).error.message).toMatch(/daily request cap.*npx -y github:frogr\/gutenberg-mcp/);
   });
 
   it("does not rate limit the playground or health check", async () => {

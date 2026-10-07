@@ -1,5 +1,5 @@
 // Call one tool from the command line, through the real MCP protocol layer
-// (in-memory transport), against live Gutendex and gutenberg.org.
+// (in-memory transport), against live Gutendex and the Gutenberg mirror.
 //
 //   npm run build
 //   node scripts/call.mjs quote_check '{"id":2701,"quote":"Call me Ishmael."}'

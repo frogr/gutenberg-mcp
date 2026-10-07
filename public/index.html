@@ -675,15 +675,15 @@
   const CLIENTS = [
     { id: "claude-code", label: "Claude Code", blocks: [
       { tag: "Remote", note: "Run once in your terminal:", code: `claude mcp add --transport http gutenberg ${ENDPOINT}` },
-      { tag: "Local", note: "Or run the server on your machine over stdio:", code: "claude mcp add --transport stdio gutenberg -- npx -y gutenberg-mcp" },
+      { tag: "Local", note: "Or run the server on your machine over stdio (npx installs it from GitHub and builds it on first run):", code: "claude mcp add --transport stdio gutenberg -- npx -y github:frogr/gutenberg-mcp" },
     ] },
     { id: "claude-desktop", label: "Claude Desktop", blocks: [
       { tag: "Remote", note: "On Pro, Max, Team or Enterprise: in Settings, open Connectors, choose Add custom connector, and paste:", code: ENDPOINT },
-      { tag: "Local", note: "On any plan: add this to claude_desktop_config.json and restart Claude Desktop.", code: cfg({ command: "npx", args: ["-y", "gutenberg-mcp"] }) },
+      { tag: "Local", note: "On any plan: add this to claude_desktop_config.json and restart Claude Desktop.", code: cfg({ command: "npx", args: ["-y", "github:frogr/gutenberg-mcp"] }) },
     ] },
     { id: "cursor", label: "Cursor", blocks: [
       { tag: "Remote", note: "Add to ~/.cursor/mcp.json (all projects) or .cursor/mcp.json (one project):", code: cfg({ url: ENDPOINT }) },
-      { tag: "Local", note: "Or run it locally over stdio:", code: cfg({ command: "npx", args: ["-y", "gutenberg-mcp"] }) },
+      { tag: "Local", note: "Or run it locally over stdio:", code: cfg({ command: "npx", args: ["-y", "github:frogr/gutenberg-mcp"] }) },
     ] },
     { id: "inspector", label: "MCP Inspector", blocks: [
       { tag: "Debug", note: "Run this, choose Streamable HTTP, and paste the endpoint URL:", code: "npx @modelcontextprotocol/inspector" },

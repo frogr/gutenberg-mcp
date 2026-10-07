@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Book } from "../book.js";
+import { creditLine, type Book } from "../book.js";
 import { GutenbergError, type GutenbergClient, type GutendexBook } from "../gutenberg.js";
 import { attributionOutput, bookIdInput, displayName, ok, settle, truncate, withGrace } from "./common.js";
 
@@ -96,7 +96,7 @@ function metaFields(id: number, m: GutendexBook) {
 function headerFields(book: Book) {
   return {
     id: book.id,
-    title: book.header.title ?? `Project Gutenberg eBook #${book.id}`,
+    title: book.header.title ?? `eBook #${book.id}`,
     authors: book.header.author ? [book.header.author] : [],
     languages: book.header.language ? [book.header.language] : [],
     subjects: [],
@@ -106,8 +106,8 @@ function headerFields(book: Book) {
 }
 
 function credit(id: number, m: GutendexBook) {
-  const author = m.authors?.[0] ? ` by ${displayName(m.authors[0].name)}` : "";
-  return `"${m.title}"${author}, from Project Gutenberg (${bookUrl(id)}).`;
+  const author = m.authors?.[0] ? displayName(m.authors[0].name) : undefined;
+  return creditLine(id, m.title, author);
 }
 
 const bookUrl = (id: number) => `https://www.gutenberg.org/ebooks/${id}`;

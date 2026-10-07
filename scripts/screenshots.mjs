@@ -3,8 +3,8 @@
 //   npm run build && node scripts/screenshots.mjs
 //
 // Starts dist/http.js on a free port, drives it with Chromium, writes
-// docs/screenshots/*.png. Needs network (the examples call Gutendex and
-// gutenberg.org). CHROMIUM_PATH overrides the browser binary.
+// docs/screenshots/*.png. Needs network (the examples call Gutendex and the
+// Gutenberg mirror). CHROMIUM_PATH overrides the browser binary.
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright-core";

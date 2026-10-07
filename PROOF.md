@@ -1,12 +1,12 @@
 # PROOF
 
-What was checked for gutenberg-mcp, with the exact commands and their real output. Everything here was run on 2026-10-07 on Linux with Node 22.22.0. Live results depend on Gutendex and gutenberg.org at the time; line numbers depend on the current Gutenberg edition of each file.
+What was checked for gutenberg-mcp, with the exact commands and their real output. Everything here was run on 2026-10-07 on Linux with Node 22.22.0. Live results depend on Gutendex and the Gutenberg mirror (gutenberg.pglaf.org) at the time; line numbers depend on the current Gutenberg edition of each file.
 
 ## Summary
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Unit and integration tests (no network) | `npm test` | 74 tests in 5 files, all pass |
+| Unit and integration tests (no network) | `npm test` | 76 tests in 5 files, all pass |
 | Types | `npm run typecheck` | clean |
 | Dependencies | `npm audit` | `found 0 vulnerabilities` |
 | stdio transport | `node scripts/smoke.mjs --live` | initialize, 6 tools listed, live `quote_check` ok |
@@ -21,10 +21,10 @@ What was checked for gutenberg-mcp, with the exact commands and their real outpu
 ```
 $ npm test
  Test Files  5 passed (5)
-      Tests  74 passed (74)
+      Tests  76 passed (76)
 ```
 
-`test/text.test.ts` covers license stripping (current and old marker styles, CRLF, BOM, files without markers), chapter detection (contents pages, illustration captions, books and acts, bare numerals, play speaker names), normalization levels and line mapping, sentence counting and the LRU/TTL caches. `test/tools.test.ts` covers each tool against two recorded book excerpts and recorded Gutendex and gutenberg.org responses, including the search fallback, the slow-catalog path, 404s, size limits, the host allow list and retries. `test/server.test.ts` runs the MCP protocol in memory (schemas, annotations, input validation before any request, error mapping, hidden internal errors). `test/http.test.ts` runs the official SDK client over a real socket and checks CORS, 405/406/400/413/429/504 handling, per-IP and daily limits, `X-Forwarded-For` trust and the playground's CSP. A mocked `fetch` throws on any unexpected request, so tests never touch the network.
+`test/text.test.ts` covers license stripping (current and old marker styles, CRLF, BOM, files without markers), chapter detection (contents pages, illustration captions, books and acts, bare numerals, play speaker names), normalization levels and line mapping, sentence counting and the LRU/TTL caches. `test/tools.test.ts` covers each tool against two recorded book excerpts and recorded Gutendex and gutenberg.org search responses, including the search fallback, the slow-catalog path, 404s, size limits, the host allow list, mapping catalog URLs onto the mirror (and a custom `GUTENBERG_MIRROR`) and retries. `test/server.test.ts` runs the MCP protocol in memory (schemas, annotations, input validation before any request, error mapping, hidden internal errors). `test/http.test.ts` runs the official SDK client over a real socket and checks CORS, 405/406/400/413/429/504 handling, per-IP and daily limits, `X-Forwarded-For` trust and the playground's CSP. A mocked `fetch` throws on any unexpected request, so tests never touch the network.
 
 ## Smoke tests
 
@@ -39,18 +39,18 @@ live tools/call quote_check ->
 SMOKE OK
 
 $ node scripts/smoke-http.mjs --live
-GET /health -> {"status":"ok","name":"gutenberg","version":"0.1.0","transport":"streamable-http","endpoint":"/mcp","uptime_s":0,"cached_books":0,"limits":{"per_ip_per_minute":30,"daily_requests":5000,"daily_used":0}}
+GET /health -> {"status":"ok","name":"gutenberg","version":"0.1.0","transport":"streamable-http","endpoint":"/mcp","uptime_s":0,"cached_books":0,"text_mirror":"https://gutenberg.pglaf.org","limits":{"per_ip_per_minute":30,"daily_requests":5000,"daily_used":0}}
 OPTIONS /mcp -> 204, allow-origin: *
 POST /mcp initialize -> 200 {"name":"gutenberg","version":"0.1.0"} protocol 2025-06-18
 POST /mcp tools/list -> 6 tools: search_books, get_book, read_passage, find_in_book, quote_check, book_stats
-GET / -> 200, 42059 bytes, title: Gutenberg MCP
-live tools/call search_books (327 ms) -> "source": "gutendex", "total": 5
-live tools/call quote_check (536 ms) -> "Verbatim: the quote appears exactly as given (only line breaks and spacing differ)."
-live tools/call quote_check (748 ms) -> "Not in this book. The closest passage (line 1113) shares 3 of 4 words."
+GET / -> 200, 42155 bytes, title: Gutenberg MCP
+live tools/call search_books (350 ms) -> "source": "gutendex", "total": 5
+live tools/call quote_check (13362 ms) -> "Verbatim: the quote appears exactly as given (only line breaks and spacing differ)."
+live tools/call quote_check (9131 ms) -> "Not in this book. The closest passage (line 1113) shares 3 of 4 words."
 HTTP SMOKE OK
 ```
 
-(Output trimmed to the verdict lines; the script prints the first 900 characters of each result.)
+(Output trimmed to the verdict lines; the script prints the first 900 characters of each result.) The two `quote_check` times include downloading Moby Dick (1.27 MB) and the Sherlock Holmes stories from gutenberg.pglaf.org on a cold cache. The mirror was slower than www.gutenberg.org in this run (the same calls took 536 ms and 748 ms against www.gutenberg.org in an earlier run); later calls for the same book come from memory.
 
 ## Live tool calls
 
@@ -72,7 +72,9 @@ Word counts include headings and, for Pride and Prejudice, the edition's preface
 
 ## Eval: quote_check and chapter detection
 
-`eval/quotes.json` has 22 quotations: 15 real (some with deliberately changed punctuation, case or apostrophes) and 7 well-known misquotes or paraphrases. Each is labeled with the match level it should get. Real quotes were confirmed by searching the downloaded text by hand. `eval/chapters.json` has 21 books with the structure each one prints (chapters, letters, staves, books, acts, scenes, prefaces), counted by hand.
+`eval/quotes.json` has 22 quotations: 15 real (some with deliberately changed punctuation, case or apostrophes) and 7 well-known misquotes or paraphrases. Each is labeled with the match level it should get, and each real quote was checked against the downloaded text. `eval/chapters.json` has 21 books, each labeled with the structure the book prints (chapters, letters, staves, books, acts, scenes, prefaces), checked against the text. One quote label and two book labels were corrected after early runs; see the notes below the output.
+
+Re-run on 2026-10-07 after book downloads moved to the gutenberg.pglaf.org mirror. Same results as the earlier run against www.gutenberg.org; only the timing changed.
 
 ```
 $ npm run build && node scripts/eval.mjs
@@ -99,7 +101,7 @@ quote_check
   PASS  #151   "Water, water, everywhere, nor any drop to drink"          expect none       got none       closest line 170
   PASS  #78    "Me Tarzan, you Jane."                                     expect none       got none       closest line 7539
   PASS  #1513  "Romeo, Romeo, where are you, Romeo?"                      expect none       got none       closest line 1429
-  22/22 correct (4237 ms, includes downloads)
+  22/22 correct (38227 ms, includes downloads)
 
 chapter detection
   PASS  #11    Alice's Adventures in Wonderland   expect 12   got 12   first CHAPTER I       (12 chapters)
@@ -161,9 +163,9 @@ gutenberg.org's OPDS search for three of the slow queries took 0.43 s, 0.78 s an
 ```
 $ rm -rf dist && npm run build && PORT=3911 npm start &
 $ curl -sS localhost:3911/health
-{"status":"ok","name":"gutenberg","version":"0.1.0","transport":"streamable-http","endpoint":"/mcp","uptime_s":2,"cached_books":0,"limits":{"per_ip_per_minute":30,"daily_requests":5000,"daily_used":0}}
+{"status":"ok","name":"gutenberg","version":"0.1.0","transport":"streamable-http","endpoint":"/mcp","uptime_s":2,"cached_books":0,"text_mirror":"https://gutenberg.pglaf.org","limits":{"per_ip_per_minute":30,"daily_requests":5000,"daily_used":0}}
 $ curl -sS -o /dev/null -w "GET / %{http_code} %{size_download}\n" localhost:3911/
-GET / 200 42089
+GET / 200 42185
 ```
 
 ## Screenshots
@@ -182,7 +184,20 @@ Taken with `node scripts/screenshots.mjs` (Playwright, Chromium from `/opt/pw-br
 - `docs/screenshots/connect.png`: client config snippets
 - `docs/screenshots/phone.png`, `docs/screenshots/phone-results.png`: phone width
 
-In `get-book-toc.png` the catalog was slow at that moment, so the book's metadata came from the file header (language shows "English", no bookshelves). That is the fallback working, not a rendering bug.
+Re-taken on 2026-10-07 after the mirror and install changes.
+
+## Install from GitHub without npm
+
+The package is not on npm. The README installs it with `npx -y github:frogr/gutenberg-mcp`, which works because a `prepare` script runs `npm run build` when npm installs from git. The GitHub repo wasn't public when this was checked, so the same path was tested from a local git URL with an empty npx cache:
+
+```
+$ rm -rf ~/.npm/_npx
+$ echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}' | npx -y git+file:///home/claude/gutenberg-mcp
+gutenberg-mcp running on stdio
+{"result":{"protocolVersion":"2025-06-18",...,"serverInfo":{"name":"gutenberg","version":"0.1.0"},...}
+```
+
+First start took 19 s (clone, install, TypeScript build). Not checked: the same command against github.com, which needs the repo to be public.
 
 ## Not verified
 

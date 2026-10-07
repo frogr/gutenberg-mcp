@@ -2,7 +2,7 @@
 // check that it initializes and lists the expected tools.
 //
 //   node scripts/smoke.mjs          # initialize + tools/list (no network)
-//   node scripts/smoke.mjs --live   # also make one real tools/call (gutenberg.org)
+//   node scripts/smoke.mjs --live   # also make one real tools/call (the Gutenberg mirror)
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 

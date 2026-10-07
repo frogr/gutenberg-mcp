@@ -3,10 +3,10 @@
 //   npm run build && node scripts/eval.mjs
 //
 // 1. quote_check on eval/quotes.json: real quotes, near-misses and famous misquotes.
-//    A case passes when the reported match level equals the hand-written label.
+//    A case passes when the reported match level equals the label in eval/quotes.json.
 // 2. get_book chapter detection on eval/chapters.json: detected entry count and
 //    first heading against the book's printed structure.
-// Needs network (downloads about a dozen books from gutenberg.org).
+// Needs network (downloads about a dozen books from the Gutenberg mirror, gutenberg.pglaf.org by default).
 import { readFileSync } from "node:fs";
 import { GutenbergClient } from "../dist/gutenberg.js";
 import { quoteCheck } from "../dist/tools/quoteCheck.js";

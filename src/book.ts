@@ -60,11 +60,21 @@ export class Book {
     return (this.statsCache ??= computeStats(this.tokens(), this.normalized({ typography: true }).text, this.chapters, 50));
   }
 
-  /** One line of credit to keep next to any quoted text. */
+  /**
+   * One line of credit to keep next to any quoted text. The license header is stripped,
+   * so the line does not present the text as a Project Gutenberg eBook (their license
+   * reserves the name for copies that keep it). It credits the source with a link to the
+   * book's landing page, which their permissions page allows.
+   */
   attribution(meta?: { title?: string; author?: string }): string {
     const title = meta?.title ?? this.header.title;
     const author = meta?.author ?? this.header.author;
-    const work = title ? `"${title}"${author ? ` by ${author}` : ""}` : `eBook #${this.id}`;
-    return `${work}, from Project Gutenberg (https://www.gutenberg.org/ebooks/${this.id}). Public domain in the USA.`;
+    return creditLine(this.id, title, author);
   }
+}
+
+/** Shared credit line: `"Title" by Author. Public domain text (USA), eBook #N: https://www.gutenberg.org/ebooks/N` */
+export function creditLine(id: number, title?: string, author?: string): string {
+  const work = title ? `"${title}"${author ? ` by ${author}` : ""}. ` : "";
+  return `${work}Public domain text (USA), eBook #${id}: https://www.gutenberg.org/ebooks/${id}`;
 }
