@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:relevance="http://a9.com/-/opensearch/extensions/relevance/1.0/">
+<id>http://www.gutenberg.org/ebooks/search.opds/?query=tolstoy</id>
+<updated>2026-10-07T09:35:05Z</updated>
+<title>Books: tolstoy</title>
+<subtitle>Free eBooks since 1971.</subtitle>
+<author>
+<name>Project Gutenberg</name>
+<uri>https://www.gutenberg.org</uri>
+<email>webmaster@gutenberg.org</email>
+</author>
+<icon>https://www.gutenberg.org/gutenberg/favicon.ico</icon>
+<link rel="search" type="application/opensearchdescription+xml" title="Project Gutenberg Catalog Search" href="https://www.gutenberg.org/catalog/osd-books.xml"/>
+<link rel="self" title="This Page" type="application/atom+xml;profile=opds-catalog" href="/ebooks/search.opds/?query=tolstoy"/>
+<link rel="alternate" type="text/html" title="HTML Page" href="/ebooks/search/?query=tolstoy"/>
+<link rel="start" title="Start Page" type="application/atom+xml;profile=opds-catalog" href="/ebooks.opds/"/>
+<link rel="next" title="Next Page" type="application/atom+xml;profile=opds-catalog" href="/ebooks/search.opds/?query=tolstoy&amp;start_index=26"/>
+<opensearch:itemsPerPage>25</opensearch:itemsPerPage>
+<opensearch:startIndex>1</opensearch:startIndex>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/authors/search.opds/?query=tolstoy</id>
+<title>Authors</title>
+<content type="text">8 author names match your search.</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/authors/search.opds/?query=tolstoy"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/subjects/search.opds/?query=tolstoy</id>
+<title>Subjects</title>
+<content type="text">6 subject headings match your search.</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/subjects/search.opds/?query=tolstoy"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/2600.opds</id>
+<title>War and Peace</title>
+<content type="text">graf Leo Tolstoy</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/2600.opds"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/1399.opds</id>
+<title>Anna Karenina</title>
+<content type="text">graf Leo Tolstoy</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/1399.opds"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/19681.opds</id>
+<title>Детство (Russian)</title>
+<content type="text">graf Leo Tolstoy</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/19681.opds"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/28920.opds</id>
+<title>War and Peace, Book 01: 1805</title>
+<content type="text">graf Leo Tolstoy</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/28920.opds"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/64908.opds</id>
+<title>What Is Art?</title>
+<content type="text">graf Leo Tolstoy</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/64908.opds"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+<entry>
+<updated>2026-10-07T09:35:05Z</updated>
+<id>https://www.gutenberg.org/ebooks/6157.opds</id>
+<title>What Men Live By, and Other Tales</title>
+<content type="text">graf Leo Tolstoy</content>
+<link type="application/atom+xml;profile=opds-catalog" rel="subsection" href="/ebooks/6157.opds"/>
+<link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="data:image/png;base64,AAAA"/>
+</entry>
+</feed>

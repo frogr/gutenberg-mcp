@@ -1,0 +1,61 @@
+{
+  "name": "gutenberg-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Project Gutenberg: search 75,000+ public-domain books, read by chapter with line numbers, find passages, verify quotations, and compute book statistics. Runs over stdio or as a remote Streamable HTTP server with a web playground.",
+  "type": "module",
+  "bin": {
+    "gutenberg-mcp": "dist/index.js",
+    "gutenberg-mcp-http": "dist/http.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "public",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/chmod-bin.mjs",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/http.js",
+    "start:stdio": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "npm run build && node scripts/smoke.mjs",
+    "smoke:http": "npm run build && node scripts/smoke-http.mjs",
+    "screenshots": "npm run build && node scripts/screenshots.mjs",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "project-gutenberg",
+    "gutendex",
+    "books",
+    "literature",
+    "quotes",
+    "claude",
+    "cursor"
+  ],
+  "author": "Austin French <austindanielfrench@gmail.com> (https://austn.net)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frogr/gutenberg-mcp.git"
+  },
+  "homepage": "https://github.com/frogr/gutenberg-mcp#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}
