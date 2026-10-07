@@ -1,0 +1,27 @@
+{
+  "about": "Quotations checked with quote_check against the live Project Gutenberg text. 'expect' is the right answer: found or not, and for found quotes the strictest match level. Real quotes were confirmed by searching the downloaded text by hand; misquotes are well-known misquotations or film lines. Labels written by hand.",
+  "cases": [
+    { "id": 2701, "quote": "Call me Ishmael.", "expect": "exact" },
+    { "id": 2701, "quote": "From hell's heart I stab at thee", "expect": "case", "why": "mid-sentence in the book: 'thee; from hell’s heart'. (Labeled 'typography' in the first run; the label was wrong.)" },
+    { "id": 1342, "quote": "It is a truth universally acknowledged that a single man in possession of a good fortune must be in want of a wife.", "expect": "words", "why": "the book has a comma after 'acknowledged'" },
+    { "id": 1342, "quote": "You must allow me to tell you how ardently I admire and love you.", "expect": "exact" },
+    { "id": 1524, "quote": "To be, or not to be, that is the question", "expect": "exact" },
+    { "id": 1524, "quote": "Something is rotten in the state of Denmark.", "expect": "exact" },
+    { "id": 1524, "quote": "The rest is silence.", "expect": "exact" },
+    { "id": 1513, "quote": "O Romeo, Romeo, wherefore art thou Romeo?", "expect": "exact" },
+    { "id": 1513, "quote": "Parting is such sweet sorrow", "expect": "exact" },
+    { "id": 1533, "quote": "Out, damned spot! out, I say!", "expect": "exact" },
+    { "id": 1533, "quote": "Lay on, Macduff", "expect": "case", "why": "the book has 'lay on, Macduff' mid-line" },
+    { "id": 46, "quote": "Marley was dead: to begin with.", "expect": "case", "why": "the book prints MARLEY in capitals" },
+    { "id": 11, "quote": "Curiouser and curiouser!", "expect": "exact" },
+    { "id": 1661, "quote": "You see, but you do not observe.", "expect": "exact" },
+    { "id": 84, "quote": "Beware; for I am fearless, and therefore powerful.", "expect": "words", "why": "the book has 'Beware, for I am fearless and therefore powerful.'" },
+    { "id": 1661, "quote": "Elementary, my dear Watson", "expect": "none", "why": "not in this collection" },
+    { "id": 84, "quote": "It's alive! It's alive!", "expect": "none", "why": "from the 1931 film" },
+    { "id": 1524, "quote": "Alas, poor Yorick! I knew him well.", "expect": "none", "why": "the book says 'I knew him, Horatio'" },
+    { "id": 1533, "quote": "Lead on, Macduff", "expect": "none", "why": "the book says 'Lay on'" },
+    { "id": 151, "quote": "Water, water, everywhere, nor any drop to drink", "expect": "none", "why": "the book says 'every where' (two words)" },
+    { "id": 78, "quote": "Me Tarzan, you Jane.", "expect": "none", "why": "from the films" },
+    { "id": 1513, "quote": "Romeo, Romeo, where are you, Romeo?", "expect": "none", "why": "paraphrase" }
+  ]
+}

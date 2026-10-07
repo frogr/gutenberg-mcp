@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gutenberg MCP</title>
+<meta name="description" content="A remote MCP server that lets Claude, Cursor and other AI assistants search, read and accurately quote 75,000+ public-domain books from Project Gutenberg. Try every tool here.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c110e'/%3E%3Cpath d='M6 9.5c3.5-1.5 7-1.2 10 1v13c-3-2.2-6.5-2.5-10-1zM26 9.5c-3.5-1.5-7-1.2-10 1v13c3-2.2 6.5-2.5 10-1z' stroke='%2346d483' stroke-width='2.2' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0f0d;
+    --surface: #121815;
+    --surface-2: #18201b;
+    --border: #233029;
+    --text: #e4ebe6;
+    --muted: #8d9c93;
+    --faint: #5f6e65;
+    --accent: #46d483;
+    --accent-ink: #062113;
+    --accent-soft: rgba(70, 212, 131, 0.12);
+    --warn: #e2b44c;
+    --warn-soft: rgba(226, 180, 76, 0.12);
+    --bad: #ec7a6b;
+    --bad-soft: rgba(236, 122, 107, 0.1);
+    --radius: 10px;
+    --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 var(--font); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre, .mono { font-family: var(--mono); font-size: 0.86em; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  button { font: inherit; }
+
+  header.top { border-bottom: 1px solid var(--border); }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
+  .brand:hover { text-decoration: none; }
+  nav.links { display: flex; gap: 20px; font-size: 14px; }
+  nav.links a { color: var(--muted); }
+  nav.links a:hover { color: var(--text); text-decoration: none; }
+
+  .hero { padding-top: 64px; padding-bottom: 44px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+  .eyebrow { color: var(--accent); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin: 0 0 14px; }
+  h1 { font-size: clamp(32px, 4.8vw, 50px); line-height: 1.08; letter-spacing: -0.025em; margin: 0 0 18px; }
+  .lede { color: var(--muted); font-size: 18px; max-width: 60ch; margin: 0 0 28px; }
+  .lede strong { color: var(--text); font-weight: 500; }
+  .endpoint { display: flex; align-items: stretch; max-width: 560px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+  .endpoint .label { padding: 12px 14px; color: var(--muted); font-size: 13px; border-right: 1px solid var(--border); white-space: nowrap; display: flex; align-items: center; }
+  .endpoint code { flex: 1; padding: 12px 14px; color: var(--text); overflow-x: auto; white-space: nowrap; display: flex; align-items: center; }
+  .endpoint button { border: 0; border-left: 1px solid var(--border); border-radius: 0; padding: 0 16px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 22px; color: var(--muted); font-size: 14px; }
+  .stats b { color: var(--text); font-weight: 600; }
+
+  /* The "check" card in the hero: what quote_check does, in one glance. */
+  .check-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  .check-card .who { font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .check-card blockquote { margin: 0; font-size: 17px; line-height: 1.45; }
+  .check-card .claim { color: var(--muted); }
+  .check-card .claim blockquote { text-decoration: line-through; text-decoration-color: rgba(236, 122, 107, 0.7); text-decoration-thickness: 1.5px; }
+  .check-card .truth { border-left: 2px solid var(--accent); padding-left: 14px; }
+  .check-card .truth .who { color: var(--accent); }
+  .check-card .src { font-size: 13px; color: var(--faint); }
+  .check-card mark { background: var(--accent-soft); color: var(--accent); border-radius: 3px; padding: 0 2px; }
+
+  section { padding: 44px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 22px; letter-spacing: -0.01em; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 68ch; }
+
+  .examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .example { text-align: left; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; transition: border-color .15s, background .15s; }
+  .example:hover, .example:focus-visible { border-color: var(--accent); background: var(--surface-2); outline: none; }
+  .example q { font-size: 16px; line-height: 1.4; quotes: "\201C" "\201D"; }
+  .example .call { color: var(--faint); font-family: var(--mono); font-size: 12px; line-height: 1.5; word-break: break-word; }
+  .example .call b { color: var(--accent); font-weight: 500; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab { font-size: 14px; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .tab code { font-size: 13px; }
+
+  .runner { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  form.tool { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .tool-desc { color: var(--muted); font-size: 13px; margin: 0; }
+  .field label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 5px; font-family: var(--mono); }
+  .field label .req { color: var(--accent); font-family: var(--font); font-weight: 500; font-size: 12px; }
+  .field .help { color: var(--faint); font-size: 12px; margin-top: 4px; line-height: 1.4; }
+  input, select, textarea { width: 100%; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; }
+  textarea { resize: vertical; min-height: 84px; line-height: 1.45; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input[type="checkbox"] { width: auto; accent-color: var(--accent); margin: 0 8px 0 0; }
+  .check { display: flex; align-items: center; font-size: 14px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn { font-weight: 600; font-size: 15px; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 8px; padding: 11px 16px; cursor: pointer; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: 0.6; cursor: progress; }
+  .btn-ghost { font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; cursor: pointer; }
+  .btn-ghost:hover { color: var(--text); border-color: var(--faint); }
+  .btn-ghost[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
+  .result { min-height: 360px; display: flex; flex-direction: column; }
+  .result-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  .result-head .meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .result-head .meta b { color: var(--text); font-weight: 600; }
+  .result-body { padding: 18px; overflow: auto; }
+  .empty { color: var(--faint); padding: 56px 8px; text-align: center; }
+  .error { color: var(--bad); white-space: pre-wrap; font-family: var(--mono); font-size: 13px; background: var(--bad-soft); border: 1px solid rgba(236, 122, 107, 0.3); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  .note { color: var(--muted); font-size: 13px; margin: 14px 0 0; }
+  .credit { color: var(--faint); font-size: 12px; margin: 18px 0 0; padding-top: 12px; border-top: 1px dashed var(--border); }
+  pre.json { margin: 0; color: #cfe3d6; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  h3 { font-size: 13px; margin: 22px 0 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  h3:first-child { margin-top: 0; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font-size: 13px; }
+  .link-btn:hover { text-decoration: underline; }
+
+  /* Book lists */
+  .books { display: flex; flex-direction: column; }
+  .book { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .book:first-child { padding-top: 0; }
+  .book:last-child { border-bottom: 0; }
+  .spine { height: 72px; border-radius: 4px 6px 6px 4px; background: var(--surface-2); border: 1px solid var(--border); border-left: 4px solid var(--accent); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  .book .t { font-weight: 600; line-height: 1.3; }
+  .book .a { color: var(--muted); font-size: 14px; }
+  .book .s { color: var(--faint); font-size: 12.5px; margin-top: 4px; }
+  .book .actions { display: flex; gap: 14px; margin-top: 6px; }
+
+  /* Book details */
+  .book-head h4 { font-size: 20px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .book-head .a { color: var(--muted); margin-bottom: 10px; }
+  .book-head p { color: var(--muted); font-size: 14px; margin: 10px 0 0; max-width: 70ch; }
+  .toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+  .toc button { text-align: left; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .toc button:hover { border-color: var(--accent); }
+  .toc .l { font-size: 12px; font-family: var(--mono); color: var(--accent); }
+  .toc .tt { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toc .ln { font-size: 11.5px; color: var(--faint); font-family: var(--mono); }
+
+  /* Reading pane */
+  .page { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 18px 0; overflow-x: auto; }
+  .page .ln-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); font-size: 15px; line-height: 1.65; }
+  .page .n { font-family: var(--mono); font-size: 11.5px; color: var(--faint); text-align: right; padding-right: 16px; user-select: none; line-height: 25px; }
+  .page .x { white-space: pre-wrap; padding-right: 18px; min-height: 1.65em; }
+  .page .hit .x { background: var(--accent-soft); }
+  .page .hit .n { color: var(--accent); }
+  .page-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .page-head .c { font-weight: 600; }
+  .page-head .c span { color: var(--muted); font-weight: 400; }
+  .page-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; color: var(--faint); font-size: 13px; }
+
+  /* quote_check verdict */
+  .verdict { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: start; padding: 16px; border-radius: 10px; border: 1px solid; margin-bottom: 18px; }
+  .verdict .icon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 2px solid currentColor; }
+  .verdict .icon svg { width: 20px; height: 20px; }
+  .verdict .h { font-weight: 650; font-size: 17px; }
+  .verdict .d { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .verdict.good { border-color: rgba(70, 212, 131, 0.35); background: var(--accent-soft); }
+  .verdict.good .icon, .verdict.good .h { color: var(--accent); }
+  .verdict.close { border-color: rgba(226, 180, 76, 0.35); background: var(--warn-soft); }
+  .verdict.close .icon, .verdict.close .h { color: var(--warn); }
+  .verdict.miss { border-color: rgba(236, 122, 107, 0.35); background: var(--bad-soft); }
+  .verdict.miss .icon, .verdict.miss .h { color: var(--bad); }
+  .yours { margin: 0 0 18px; padding-left: 14px; border-left: 2px solid var(--border); color: var(--muted); font-size: 15px; }
+  .missing { color: var(--bad); font-family: var(--mono); font-size: 12.5px; }
+
+  /* Stats */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 8px; }
+  .kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .kpi .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .kpi .k { color: var(--muted); font-size: 12px; }
+  .bars { display: flex; flex-direction: column; gap: 6px; }
+  .bar-row { display: grid; grid-template-columns: minmax(80px, 34%) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 14px; }
+  .bar-row .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar { height: 8px; background: var(--surface-2); border-radius: 4px; position: relative; }
+  .bar span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 4px; }
+  .bar-row .num { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .match { margin-bottom: 14px; }
+  .match .where { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .match .page { padding: 10px 0; }
+
+  .connect { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .snippet { position: relative; }
+  .snippet pre { margin: 0; padding: 16px 18px; padding-right: 76px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; color: #cfe3d6; font-size: 13px; line-height: 1.6; }
+  .snippet .copy { position: absolute; top: 10px; right: 10px; }
+  .snippet-note { color: var(--muted); font-size: 14px; margin: 6px 0 10px; }
+  .snippet-note b { color: var(--text); font-weight: 600; }
+
+  footer { border-top: 1px solid var(--border); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+    .runner { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 0 16px; }
+    nav.links a.hide-sm { display: none; }
+    .hero { padding-top: 36px; padding-bottom: 32px; }
+    .lede { font-size: 16px; }
+    .endpoint .label { display: none; }
+    .examples { grid-template-columns: minmax(0, 1fr); }
+    .row-2 { grid-template-columns: minmax(0, 1fr); }
+    section { padding: 32px 0; }
+    .result-body { padding: 14px; }
+    .page .ln-row { grid-template-columns: 44px minmax(0, 1fr); font-size: 14.5px; }
+    .page .n { padding-right: 10px; }
+    .toc { grid-template-columns: minmax(0, 1fr); }
+    .bar-row { grid-template-columns: 90px minmax(0, 1fr) 48px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#18201b"/><path d="M6 9.5c3.5-1.5 7-1.2 10 1v13c-3-2.2-6.5-2.5-10-1zM26 9.5c-3.5-1.5-7-1.2-10 1v13c3-2.2 6.5-2.5 10-1z" stroke="#46d483" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>
+      gutenberg-mcp
+    </a>
+    <nav class="links">
+      <a href="#try">Try it</a>
+      <a href="#connect">Connect</a>
+      <a class="hide-sm" href="https://github.com/frogr/gutenberg-mcp">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div>
+      <p class="eyebrow">Remote MCP server</p>
+      <h1>Classic books your AI can read, search and quote correctly</h1>
+      <p class="lede">
+        <strong>MCP</strong> (Model Context Protocol) is the open standard that lets AI apps like Claude and Cursor call outside tools.
+        This server connects them to <a href="https://www.gutenberg.org/">Project Gutenberg</a>, the free library of 75,000+ public-domain books.
+        Your assistant can find a book, read it by chapter with line numbers, and check a quotation against the real text before it repeats it. No API key needed.
+      </p>
+      <div class="endpoint">
+        <span class="label">Endpoint</span>
+        <code id="endpoint-url">/mcp</code>
+        <button class="btn-ghost" id="copy-endpoint" type="button">Copy</button>
+      </div>
+      <div class="stats">
+        <span><b>6</b> read-only tools</span>
+        <span>Streamable HTTP or stdio</span>
+        <span id="health-stat">Checking health...</span>
+      </div>
+    </div>
+    <aside class="check-card" aria-label="What quote_check does">
+      <div class="claim">
+        <div class="who">Often quoted as</div>
+        <blockquote>“It is a truth universally acknowledged that a single man in possession of a good fortune must be in want of a wife.”</blockquote>
+      </div>
+      <div class="truth">
+        <div class="who">Pride and Prejudice, lines 673-674</div>
+        <blockquote>It is a truth universally acknowledged<mark>,</mark> that a single man in possession of a good fortune must be in want of a wife.</blockquote>
+      </div>
+      <div class="src"><code>quote_check</code> finds the passage, says how close the copy is, and returns the book's own lines.</div>
+    </aside>
+  </div>
+
+  <section id="examples">
+    <div class="wrap">
+      <h2>Things to ask</h2>
+      <p class="sub">In Claude you just ask. Here you can see the tool call it turns into, and run it against the live library.</p>
+      <div class="examples" id="example-list"></div>
+    </div>
+  </section>
+
+  <section id="try">
+    <div class="wrap">
+      <h2>Run a tool</h2>
+      <p class="sub">The same six tools your assistant sees. Each form is built from the tool's input schema, and every call goes through the real MCP endpoint. A book's first call downloads it; later calls come from memory.</p>
+      <div class="tabs" role="tablist" id="tool-tabs"></div>
+      <div class="runner">
+        <div class="panel"><form class="tool" id="tool-form" novalidate></form></div>
+        <div class="panel result" aria-live="polite">
+          <div class="result-head">
+            <span class="meta" id="result-meta">No results yet</span>
+            <button type="button" class="btn-ghost" id="json-toggle" aria-pressed="false" disabled>Raw JSON</button>
+          </div>
+          <div class="result-body" id="result-body"><div class="empty">Pick an example above, or fill in the form and press Run.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="connect">
+    <div class="wrap">
+      <h2>Connect your client</h2>
+      <p class="sub">Use this hosted endpoint, or run the server on your own machine over stdio with <code>npx</code>. Pick your client:</p>
+      <div class="tabs" role="tablist" id="client-tabs"></div>
+      <div class="connect" id="client-body"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Books from <a href="https://www.gutenberg.org/">Project Gutenberg</a>, catalog via <a href="https://gutendex.com/">Gutendex</a>. Not affiliated with either.</span>
+    <span><a href="https://github.com/frogr/gutenberg-mcp">Source (MIT)</a> &middot; Need an MCP server for your own data? <a href="https://austn.net">austn.net</a></span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (sel) => document.querySelector(sel);
+  const ENDPOINT = location.origin + "/mcp";
+
+  /** Tiny DOM builder. Strings become text nodes, so book text is never parsed as HTML. */
+  function h(tag, attrs, ...children) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of children.flat()) {
+      if (c == null || c === false) continue;
+      el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+    return el;
+  }
+  function svg(path) {
+    const ns = "http://www.w3.org/2000/svg";
+    const s = document.createElementNS(ns, "svg");
+    s.setAttribute("viewBox", "0 0 24 24");
+    s.setAttribute("aria-hidden", "true");
+    const p = document.createElementNS(ns, "path");
+    p.setAttribute("d", path);
+    p.setAttribute("fill", "none");
+    p.setAttribute("stroke", "currentColor");
+    p.setAttribute("stroke-width", "2.6");
+    p.setAttribute("stroke-linecap", "round");
+    p.setAttribute("stroke-linejoin", "round");
+    s.append(p);
+    return s;
+  }
+  const ICON = { good: "M5 12.5l4.5 4.5L19 7.5", close: "M5 12h14", miss: "M7 7l10 10M17 7L7 17" };
+
+  const EXAMPLES = [
+    { q: "Is “Call me Ishmael” really in Moby Dick?", tool: "quote_check", args: { id: 2701, quote: "Call me Ishmael." } },
+    { q: "Does Holmes say “Elementary, my dear Watson” in The Adventures of Sherlock Holmes?", tool: "quote_check", args: { id: 1661, quote: "Elementary, my dear Watson" } },
+    { q: "Quote the opening line of Pride and Prejudice exactly.", tool: "quote_check", args: { id: 1342, quote: "It is a truth universally acknowledged that a single man in possession of a good fortune must be in want of a wife." } },
+    { q: "Find Frankenstein on Project Gutenberg.", tool: "search_books", args: { query: "frankenstein" } },
+    { q: "How is A Tale of Two Cities divided?", tool: "get_book", args: { id: 98 } },
+    { q: "Read me the start of the first stave of A Christmas Carol.", tool: "read_passage", args: { id: 46, chapter: 2, max_lines: 60 } },
+    { q: "Where does the white whale come up in Moby Dick?", tool: "find_in_book", args: { id: 2701, query: "white whale", max_results: 5, context_lines: 1 } },
+    { q: "How long is Pride and Prejudice, and who is mentioned most?", tool: "book_stats", args: { id: 1342, top_n: 12 } },
+  ];
+
+  // ---------- MCP over HTTP ----------
+  let rpcId = 0;
+  async function rpc(method, params) {
+    const res = await fetch("/mcp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: ++rpcId, method, params }),
+    });
+    let body;
+    try { body = await res.json(); } catch { throw new Error(`HTTP ${res.status} from /mcp`); }
+    if (body.error) throw new Error(body.error.message || `HTTP ${res.status}`);
+    return body.result;
+  }
+
+  // ---------- examples ----------
+  function formatCall(tool, args) {
+    const parts = Object.entries(args).map(([k, v]) => `${k}: ${JSON.stringify(v)}`);
+    return h("span", { class: "call" }, h("b", {}, tool), `(${parts.join(", ")})`);
+  }
+  for (const ex of EXAMPLES) {
+    $("#example-list").append(
+      h("button", { type: "button", class: "example", onclick: () => go(ex.tool, ex.args, true) }, h("q", {}, ex.q), formatCall(ex.tool, ex.args)),
+    );
+  }
+
+  // ---------- tool forms ----------
+  let tools = [];
+  let current = null;
+
+  function fieldFor(name, schema, required) {
+    const id = `f-${name}`;
+    const help = schema.description ? h("div", { class: "help" }, schema.description) : null;
+    if (schema.type === "boolean") {
+      return h("div", { class: "field" },
+        h("label", { class: "check", for: id }, h("input", { type: "checkbox", id, name, "data-kind": "boolean", checked: schema.default === true }), name),
+        help);
+    }
+    let input;
+    if (schema.type === "integer" || schema.type === "number") {
+      input = h("input", { type: "number", inputmode: "numeric", id, name, "data-kind": "number", min: schema.minimum, max: schema.maximum, step: 1, placeholder: schema.default != null ? String(schema.default) : "" });
+    } else if (name === "quote") {
+      input = h("textarea", { id, name, "data-kind": "string", maxlength: schema.maxLength, spellcheck: "false" });
+    } else {
+      input = h("input", { type: "text", id, name, "data-kind": "string", autocomplete: "off", spellcheck: "false", maxlength: schema.maxLength });
+    }
+    return h("div", { class: "field" }, h("label", { for: id }, name, required ? h("span", { class: "req" }, "required") : null), input, help);
+  }
+
+  const PAIRS = [["chapter", "start_line"], ["max_results", "context_lines"], ["language", "page"]];
+
+  function renderForm(tool) {
+    current = tool;
+    const props = tool.inputSchema.properties || {};
+    const required = new Set(tool.inputSchema.required || []);
+    const form = $("#tool-form");
+    form.replaceChildren(h("p", { class: "tool-desc" }, tool.description));
+    const done = new Set();
+    for (const n of Object.keys(props)) {
+      if (done.has(n)) continue;
+      const pair = PAIRS.find((p) => p[0] === n && props[p[1]]);
+      if (pair) {
+        form.append(h("div", { class: "row-2" }, pair.map((m) => fieldFor(m, props[m], required.has(m)))));
+        pair.forEach((m) => done.add(m));
+      } else {
+        form.append(fieldFor(n, props[n], required.has(n)));
+        done.add(n);
+      }
+    }
+    form.append(h("button", { type: "submit", class: "btn" }, "Run ", tool.name));
+    for (const b of document.querySelectorAll("#tool-tabs .tab")) b.setAttribute("aria-selected", String(b.dataset.tool === tool.name));
+  }
+
+  function readArgs() {
+    const args = {};
+    for (const el of $("#tool-form").querySelectorAll("[name]")) {
+      const kind = el.dataset.kind;
+      if (kind === "boolean") { args[el.name] = el.checked; continue; }
+      const v = el.value.trim();
+      if (!v) continue;
+      args[el.name] = kind === "number" ? Number(v) : v;
+    }
+    return args;
+  }
+
+  function fillArgs(args) {
+    for (const el of $("#tool-form").querySelectorAll("[name]")) {
+      const v = args[el.name];
+      if (el.dataset.kind === "boolean") { el.checked = v != null ? Boolean(v) : el.defaultChecked; continue; }
+      el.value = v == null ? "" : String(v);
+    }
+  }
+
+  $("#tool-form").addEventListener("submit", (e) => { e.preventDefault(); run(current.name, readArgs()); });
+
+  /** Switch to a tool, fill its form, run it. Used by examples and by buttons inside results. */
+  function go(name, args, scroll) {
+    const tool = tools.find((t) => t.name === name);
+    if (!tool) return;
+    renderForm(tool);
+    fillArgs(args);
+    if (scroll) $("#try").scrollIntoView({ behavior: "smooth", block: "start" });
+    else $("#result-meta").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    run(name, args);
+  }
+
+  // ---------- running + results ----------
+  let last = null;
+  let showJson = false;
+  const toggle = $("#json-toggle");
+  toggle.addEventListener("click", () => {
+    showJson = !showJson;
+    toggle.setAttribute("aria-pressed", String(showJson));
+    if (last) paint();
+  });
+
+  async function run(name, args) {
+    const btn = $("#tool-form .btn");
+    btn.disabled = true;
+    btn.textContent = "Running...";
+    $("#result-meta").textContent = `Calling ${name}...`;
+    const t0 = performance.now();
+    try {
+      const result = await rpc("tools/call", { name, arguments: args });
+      last = { name, args, result, ms: Math.round(performance.now() - t0) };
+    } catch (err) {
+      last = { name, args, error: err.message, ms: Math.round(performance.now() - t0) };
+    } finally {
+      btn.disabled = false;
+      btn.replaceChildren("Run ", name);
+    }
+    toggle.disabled = !last.result;
+    paint();
+  }
+
+  function paint() {
+    const body = $("#result-body");
+    const meta = $("#result-meta");
+    body.replaceChildren();
+    if (last.error) {
+      meta.replaceChildren(h("b", {}, last.name), " failed");
+      body.append(h("p", { class: "error" }, last.error));
+      return;
+    }
+    const r = last.result;
+    const data = r.structuredContent ?? safeParse(r.content?.[0]?.text);
+    if (r.isError) {
+      meta.replaceChildren(h("b", {}, last.name), ` returned an error · ${last.ms} ms`);
+      body.append(h("p", { class: "error" }, r.content?.[0]?.text ?? "Unknown error"));
+      return;
+    }
+    meta.replaceChildren(h("b", {}, last.name), ` · ${last.ms} ms`);
+    if (showJson || !data) {
+      body.append(h("pre", { class: "json" }, JSON.stringify(showJson ? r : data ?? r, null, 2)));
+      return;
+    }
+    body.append(RENDERERS[last.name](data));
+    if (data.note) body.append(h("p", { class: "note" }, data.note));
+    if (data.attribution) body.append(h("p", { class: "credit" }, data.attribution));
+  }
+
+  function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
+  const fmt = (n) => Number(n).toLocaleString("en-US");
+  const nothing = (msg) => h("div", { class: "empty" }, msg);
+  const chapterName = (c) => (c ? [c.part, c.label].filter(Boolean).join(" · ") + (c.title ? `: ${c.title}` : "") : "");
+  const range = (a, b) => (a === b ? `Line ${fmt(a)}` : `Lines ${fmt(a)}-${fmt(b)}`);
+  const years = (a) => (a.birth_year || a.death_year ? ` (${a.birth_year ?? "?"}-${a.death_year ?? "?"})` : "");
+
+  /** Numbered lines as a page. `text` is the tool's "  813  line" format. hit = [start, end] to highlight. */
+  function page(text, hit) {
+    const rows = text.split("\n").map((row) => {
+      const m = /^\s*(\d+) {2}(.*)$/.exec(row) || [null, "", row];
+      const n = Number(m[1]);
+      const isHit = hit && n >= hit[0] && n <= hit[1];
+      return h("div", { class: `ln-row${isHit ? " hit" : ""}` }, h("span", { class: "n" }, m[1]), h("span", { class: "x" }, m[2]));
+    });
+    return h("div", { class: "page" }, rows);
+  }
+
+  function bars(items, label, value) {
+    const max = Math.max(...items.map(value), 1);
+    return h("div", { class: "bars" }, items.map((it) =>
+      h("div", { class: "bar-row" },
+        h("span", { class: "lbl", title: label(it) }, label(it)),
+        h("div", { class: "bar" }, h("span", { style: `width:${(value(it) / max) * 100}%` })),
+        h("span", { class: "num" }, fmt(value(it))))));
+  }
+
+  const RENDERERS = {
+    search_books(d) {
+      if (!d.books.length) return nothing("No books matched.");
+      return h("div", {},
+        h("p", { class: "note", style: "margin:0 0 14px" }, d.total != null ? `${fmt(d.total)} matching book${d.total === 1 ? "" : "s"}` : `${d.books.length} books from gutenberg.org search`, d.next_page ? `, more on page ${d.next_page}` : ""),
+        h("div", { class: "books" }, d.books.map((b) =>
+          h("div", { class: "book" },
+            h("div", { class: "spine" }, `#${b.id}`),
+            h("div", {},
+              h("div", { class: "t" }, b.title),
+              h("div", { class: "a" }, b.authors.map((a) => a.name + years(a)).join(", ") || "Unknown author"),
+              h("div", { class: "s" }, [b.languages.join(", "), b.download_count != null ? `${fmt(b.download_count)} downloads last month` : null, b.has_plain_text === false ? "no plain text" : null].filter(Boolean).join(" · ")),
+              b.has_plain_text !== false ? h("div", { class: "actions" },
+                h("button", { type: "button", class: "link-btn", onclick: () => go("get_book", { id: b.id }) }, "Chapters"),
+                h("button", { type: "button", class: "link-btn", onclick: () => go("read_passage", { id: b.id, start_line: 1, max_lines: 80 }) }, "Read"),
+                h("button", { type: "button", class: "link-btn", onclick: () => go("book_stats", { id: b.id }) }, "Stats")) : null)))));
+    },
+
+    get_book(d) {
+      const out = h("div", {},
+        h("div", { class: "book-head" },
+          h("h4", {}, d.title),
+          h("div", { class: "a" }, d.authors.join(", ") || "Unknown author", d.release_date ? ` · on Project Gutenberg since ${d.release_date}` : ""),
+          h("div", { class: "pills" }, [...d.languages, ...d.bookshelves.slice(0, 4)].map((s) => h("span", { class: "pill" }, s))),
+          d.summary ? h("p", {}, d.summary) : null));
+      out.append(h("h3", {}, `${d.chapter_count} sections · ${fmt(d.line_count)} lines`));
+      if (!d.chapters.length) {
+        out.append(nothing("No chapter headings detected. Read by line number instead."));
+        return out;
+      }
+      out.append(h("div", { class: "toc" }, d.chapters.map((c) =>
+        h("button", { type: "button", title: `Read ${chapterName(c)}`, onclick: () => go("read_passage", { id: d.id, chapter: c.index, max_lines: 80 }) },
+          h("span", { class: "l" }, [c.part, c.label].filter(Boolean).join(" · ")),
+          c.title ? h("span", { class: "tt" }, c.title) : null,
+          h("span", { class: "ln" }, `lines ${fmt(c.start_line)}-${fmt(c.end_line)}`)))));
+      return out;
+    },
+
+    read_passage(d) {
+      return h("div", {},
+        h("div", { class: "page-head" },
+          h("span", { class: "c" }, d.title || `Book ${d.id}`, d.chapter ? h("span", {}, ` · ${chapterName(d.chapter)}`) : null)),
+        page(d.text),
+        h("div", { class: "page-foot" },
+          h("span", {}, `Lines ${fmt(d.start_line)}-${fmt(d.end_line)} of ${fmt(d.total_lines)}`),
+          d.next_start_line ? h("button", { type: "button", class: "btn-ghost", onclick: () => go("read_passage", { id: d.id, start_line: d.next_start_line, max_lines: last.args.max_lines || 80 }) }, "Next page") : null));
+    },
+
+    find_in_book(d) {
+      const out = h("div", {},
+        h("div", { class: "kpis" },
+          h("div", { class: "kpi" }, h("div", { class: "v" }, fmt(d.total_matches)), h("div", { class: "k" }, `matches for “${d.query}”`)),
+          h("div", { class: "kpi" }, h("div", { class: "v" }, fmt(d.by_chapter.length)), h("div", { class: "k" }, "chapters"))));
+      if (!d.total_matches) return out;
+      if (d.by_chapter.length > 1) {
+        const top = [...d.by_chapter].sort((a, b) => b.count - a.count).slice(0, 8);
+        out.append(h("h3", {}, "Most mentions"), bars(top, (c) => (c.title ? `${c.label.replace(/^CHAPTER /, "Ch. ")}: ${c.title}` : c.label), (c) => c.count));
+      }
+      out.append(h("h3", {}, `First ${d.returned}`));
+      for (const m of d.matches) {
+        out.append(h("div", { class: "match" },
+          h("div", { class: "where" }, `Line ${fmt(m.start_line)}`, m.chapter ? ` · ${chapterName(m.chapter)}` : ""),
+          page(m.excerpt, [m.start_line, m.end_line])));
+      }
+      return out;
+    },
+
+    quote_check(d) {
+      // The heading already says "Verbatim" or "Not in this book"; don't repeat it.
+      const verdictDetail = (v) => {
+        const rest = v.replace(/^(Not in this book(\.\s*|, and\s*)|Verbatim:\s*)/, "");
+        return rest.charAt(0).toUpperCase() + rest.slice(1);
+      };
+      const kind = d.match === "exact" || d.match === "typography" ? "good" : d.found ? "close" : "miss";
+      const head = { exact: "Verbatim", typography: "Verbatim", case: "Close: capitalization differs", words: "Close: punctuation differs", none: "Not in this book" }[d.match];
+      const out = h("div", {},
+        h("div", { class: `verdict ${kind}` },
+          h("div", { class: "icon" }, svg(ICON[kind])),
+          h("div", {}, h("div", { class: "h" }, head), h("div", { class: "d" }, verdictDetail(d.verdict)))),
+        h("h3", {}, "Your quote"),
+        h("blockquote", { class: "yours" }, d.quote));
+      if (d.locations.length) {
+        out.append(h("h3", {}, d.occurrences > 1 ? `The book says (${d.occurrences} places)` : "The book says"));
+        for (const l of d.locations) {
+          out.append(h("div", { class: "match" },
+            h("div", { class: "where" }, range(l.start_line, l.end_line), l.chapter ? ` · ${chapterName(l.chapter)}` : ""),
+            page(l.text, [l.start_line, l.end_line])));
+        }
+      }
+      if (d.closest) {
+        const c = d.closest;
+        out.append(h("h3", {}, "Closest real passage"),
+          h("div", { class: "match" },
+            h("div", { class: "where" }, range(c.start_line, c.end_line), c.chapter ? ` · ${chapterName(c.chapter)}` : ""),
+            page(c.text, [c.start_line, c.end_line]),
+            c.missing_words.length ? h("p", { class: "note" }, "Not in this passage: ", h("span", { class: "missing" }, c.missing_words.join(", "))) : null));
+      }
+      return out;
+    },
+
+    book_stats(d) {
+      const k = (v, label) => h("div", { class: "kpi" }, h("div", { class: "v" }, v), h("div", { class: "k" }, label));
+      const hours = d.reading_time_minutes >= 90 ? `${Math.round(d.reading_time_minutes / 6) / 10} h` : `${d.reading_time_minutes} min`;
+      const out = h("div", {},
+        d.title ? h("div", { class: "page-head" }, h("span", { class: "c" }, d.title)) : null,
+        h("div", { class: "kpis" },
+          k(fmt(d.word_count), "words"),
+          k(fmt(d.unique_words), "unique words"),
+          k(fmt(d.sentence_count), "sentences (approx.)"),
+          k(d.avg_sentence_length_words, "words per sentence"),
+          k(hours, "to read at 238 wpm"),
+          k(fmt(d.chapter_count), "chapters")),
+        h("h3", {}, "Most frequent words"),
+        bars(d.top_words, (w) => w.word, (w) => w.count));
+      const ch = (c) => [c.label, c.title].filter(Boolean).join(": ") + ` (${fmt(c.word_count)} words)`;
+      if (d.longest_chapter) {
+        out.append(h("h3", {}, "Chapters"),
+          h("p", { class: "note", style: "margin:0" }, "Longest: ", h("b", {}, ch(d.longest_chapter)), h("br"), "Shortest: ", h("b", {}, ch(d.shortest_chapter))));
+      }
+      return out;
+    },
+  };
+
+  // ---------- connect snippets ----------
+  const cfg = (obj) => JSON.stringify({ mcpServers: { gutenberg: obj } }, null, 2);
+  const CLIENTS = [
+    { id: "claude-code", label: "Claude Code", blocks: [
+      { tag: "Remote", note: "Run once in your terminal:", code: `claude mcp add --transport http gutenberg ${ENDPOINT}` },
+      { tag: "Local", note: "Or run the server on your machine over stdio:", code: "claude mcp add --transport stdio gutenberg -- npx -y gutenberg-mcp" },
+    ] },
+    { id: "claude-desktop", label: "Claude Desktop", blocks: [
+      { tag: "Remote", note: "On Pro, Max, Team or Enterprise: in Settings, open Connectors, choose Add custom connector, and paste:", code: ENDPOINT },
+      { tag: "Local", note: "On any plan: add this to claude_desktop_config.json and restart Claude Desktop.", code: cfg({ command: "npx", args: ["-y", "gutenberg-mcp"] }) },
+    ] },
+    { id: "cursor", label: "Cursor", blocks: [
+      { tag: "Remote", note: "Add to ~/.cursor/mcp.json (all projects) or .cursor/mcp.json (one project):", code: cfg({ url: ENDPOINT }) },
+      { tag: "Local", note: "Or run it locally over stdio:", code: cfg({ command: "npx", args: ["-y", "gutenberg-mcp"] }) },
+    ] },
+    { id: "inspector", label: "MCP Inspector", blocks: [
+      { tag: "Debug", note: "Run this, choose Streamable HTTP, and paste the endpoint URL:", code: "npx @modelcontextprotocol/inspector" },
+    ] },
+  ];
+
+  function renderClient(c) {
+    for (const b of document.querySelectorAll("#client-tabs .tab")) b.setAttribute("aria-selected", String(b.dataset.client === c.id));
+    $("#client-body").replaceChildren(...c.blocks.map((b) =>
+      h("div", {}, h("p", { class: "snippet-note" }, h("b", {}, b.tag), " · ", b.note),
+        h("div", { class: "snippet" }, h("pre", {}, h("code", {}, b.code)), h("button", { type: "button", class: "btn-ghost copy", onclick: (e) => copy(b.code, e.currentTarget) }, "Copy")))));
+  }
+  for (const c of CLIENTS) {
+    $("#client-tabs").append(h("button", { type: "button", class: "tab", role: "tab", "data-client": c.id, onclick: () => renderClient(c) }, c.label));
+  }
+  renderClient(CLIENTS[0]);
+
+  async function copy(text, btn) {
+    try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
+    catch { btn.textContent = "Select + copy"; }
+    setTimeout(() => (btn.textContent = "Copy"), 1500);
+  }
+  $("#endpoint-url").textContent = ENDPOINT;
+  $("#copy-endpoint").addEventListener("click", (e) => copy(ENDPOINT, e.currentTarget));
+
+  // ---------- boot ----------
+  fetch("/health").then((r) => r.json()).then((hl) => {
+    $("#health-stat").replaceChildren(h("b", {}, "Healthy"), ` · v${hl.version} · ${hl.limits.per_ip_per_minute} calls/min per visitor`);
+  }).catch(() => { $("#health-stat").textContent = "Health check failed"; });
+
+  rpc("tools/list", {}).then((res) => {
+    tools = res.tools;
+    for (const t of tools) {
+      $("#tool-tabs").append(h("button", { type: "button", class: "tab", role: "tab", "data-tool": t.name, onclick: () => renderForm(t) }, h("code", {}, t.name)));
+    }
+    renderForm(tools.find((t) => t.name === "quote_check") || tools[0]);
+    fillArgs(EXAMPLES[0].args);
+  }).catch((err) => {
+    $("#tool-form").replaceChildren(h("p", { class: "error" }, `Could not load tools: ${err.message}`));
+  });
+})();
+</script>
+</body>
+</html>

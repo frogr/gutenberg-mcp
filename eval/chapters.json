@@ -1,0 +1,149 @@
+{
+  "about": "Expected table-of-contents size for get_book, written by hand from each book's printed structure. Counts include front and back matter headings that the book prints (PREFACE, ETYMOLOGY, EPILOGUE) and, for plays, acts plus scenes. Books marked held_out were added after the heuristics were final and were not used to tune them; the rest were looked at while writing the detector.",
+  "books": [
+    {
+      "id": 11,
+      "expect": 12,
+      "first": "CHAPTER I",
+      "what": "12 chapters"
+    },
+    {
+      "id": 1342,
+      "expect": 62,
+      "first": "PREFACE",
+      "what": "preface + 61 chapters"
+    },
+    {
+      "id": 2701,
+      "expect": 138,
+      "first": "ETYMOLOGY",
+      "what": "etymology, extracts, 135 chapters, epilogue"
+    },
+    {
+      "id": 84,
+      "expect": 28,
+      "first": "LETTER 1",
+      "what": "4 letters + 24 chapters"
+    },
+    {
+      "id": 46,
+      "expect": 6,
+      "first": "PREFACE",
+      "what": "preface + 5 staves"
+    },
+    {
+      "id": 98,
+      "expect": 48,
+      "first": "BOOK THE FIRST",
+      "what": "3 books + 45 chapters"
+    },
+    {
+      "id": 1661,
+      "expect": 12,
+      "first": "I",
+      "what": "12 stories"
+    },
+    {
+      "id": 345,
+      "expect": 27,
+      "first": "CHAPTER I",
+      "what": "27 chapters"
+    },
+    {
+      "id": 1513,
+      "expect": 30,
+      "first": "PROLOGUE",
+      "what": "prologue + 5 acts + 24 scenes",
+      "relabeled": "was 29 without the prologue; the opening sonnet is a printed section"
+    },
+    {
+      "id": 1524,
+      "expect": 25,
+      "first": "ACT I",
+      "what": "5 acts + 20 scenes"
+    },
+    {
+      "id": 1533,
+      "expect": 33,
+      "first": "ACT I",
+      "what": "5 acts + 28 scenes"
+    },
+    {
+      "id": 1260,
+      "expect": 39,
+      "first": "PREFACE",
+      "what": "preface + 38 chapters",
+      "held_out": false,
+      "relabeled": "was 38; the book prints Brontë's preface before chapter I",
+      "tuned_on": "failed in the first held-out run, then used to improve the detector"
+    },
+    {
+      "id": 1400,
+      "expect": 59,
+      "first": "CHAPTER I",
+      "what": "59 chapters",
+      "held_out": true
+    },
+    {
+      "id": 174,
+      "expect": 21,
+      "first": "PREFACE",
+      "what": "preface + 20 chapters",
+      "held_out": false,
+      "tuned_on": "failed in the first held-out run, then used to improve the detector"
+    },
+    {
+      "id": 120,
+      "expect": 40,
+      "first": "PART ONE",
+      "what": "6 parts + 34 chapters",
+      "held_out": false,
+      "tuned_on": "failed in the first held-out run, then used to improve the detector"
+    },
+    {
+      "id": 76,
+      "expect": 43,
+      "first": "CHAPTER I",
+      "what": "42 chapters + CHAPTER THE LAST",
+      "held_out": true
+    },
+    {
+      "id": 64317,
+      "expect": 9,
+      "first": "I",
+      "what": "9 chapters",
+      "held_out": false,
+      "tuned_on": "failed in the second held-out run (bare I, II, III numerals), then used to improve the detector"
+    },
+    {
+      "id": 219,
+      "expect": 3,
+      "first": "I",
+      "what": "3 parts",
+      "held_out": false,
+      "tuned_on": "failed in the second held-out run (bare I, II, III numerals), then used to improve the detector"
+    },
+    {
+      "id": 36,
+      "expect": 29,
+      "first": "BOOK ONE",
+      "what": "2 books + 27 chapters",
+      "held_out": true
+    },
+    {
+      "id": 5200,
+      "expect": 3,
+      "first": "I",
+      "what": "3 parts",
+      "held_out": false,
+      "tuned_on": "failed in the second held-out run (bare I, II, III numerals), then used to improve the detector"
+    },
+    {
+      "id": 768,
+      "expect": 34,
+      "first": "CHAPTER I",
+      "what": "34 chapters",
+      "held_out": true
+    }
+  ]
+}
