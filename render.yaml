@@ -1,0 +1,23 @@
+# Render Blueprint: New > Blueprint > pick this repo.
+services:
+  - type: web
+    name: gutenberg-mcp
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Render puts one proxy in front of the app; use its X-Forwarded-For entry for rate limiting.
+      - key: TRUST_PROXY
+        value: "1"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "30"
+      - key: DAILY_REQUEST_LIMIT
+        value: "5000"
+      # The free plan has 512 MB of RAM. Parsed books are kept in memory up to this budget.
+      - key: BOOK_CACHE_MB
+        value: "150"
